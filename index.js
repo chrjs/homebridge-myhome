@@ -53,6 +53,7 @@ class LegrandMyHome {
 		this.config.devices.forEach(function (accessory) {
 			this.log.info("LegrandMyHome: adds accessory");
 			accessory.parent = this;
+			if (accessory.accessory == 'MHScene') this.devices.push(new MHScene(this.log,accessory))
 			if (accessory.accessory == 'MHRelay') this.devices.push(new MHRelay(this.log,accessory))
 			if (accessory.accessory == 'MHBlind') this.devices.push(new MHBlind(this.log,accessory))
 			if (accessory.accessory == 'MHBlindAdvanced') this.devices.push(new MHBlindAdvanced(this.log,accessory))
@@ -62,6 +63,7 @@ class LegrandMyHome {
 			if (accessory.accessory == 'MHThermostat') this.devices.push(new MHThermostat(this.log,accessory))
 			if (accessory.accessory == 'MHExternalThermometer') this.devices.push(new MHThermometer(this.log,accessory))
 			if (accessory.accessory == 'MHContactSensor') this.devices.push(new MHContactSensor(this.log,accessory))
+			/* if (accessory.accessory == 'MHButton') this.devices.push(new MHButton(this.log,accessory)) */
 			/* if (accessory.accessory == 'MHPowerMeter') this.devices.push(new MHPowerMeter(this.log,accessory)) */
 		}.bind(this));
 		this.log.info("LegrandMyHome for MyHome Gateway at " + config.ipaddress + ":" + config.port);
@@ -266,7 +268,15 @@ class MHRelay {
 				if (this.power && this.bri == 0) {
 					this.bri = 100;
 				}
-				this.mh.relayCommand(this.address,this.power)
+
+				/* Custom frame support */
+				if (this.power && this.config.frame_on != null) {
+					this.mh.send(this.config.frame_on);
+				} else if (!this.power && this.config.frame_off != null) {
+					this.mh.send(this.config.frame_off);
+				} else {
+					this.mh.relayCommand(this.address,this.power)
+				}
 				callback(null);
 			})
 			.on('get', (callback) => {
@@ -440,6 +450,55 @@ class MHBlindAdvanced {
 
 		return [service, this.windowCoveringPlusService];
 	}
+}
+
+
+// new object for scenario (or IR blaster) activation (credits to dendeps)
+class MHScene {
+	constructor(log, config) {
+		this.config = config || {};
+		this.mh = config.parent.controller;
+		this.name = config.name;
+		this.address = config.address;
+		this.scene = config.scene;
+		this.displayName = config.name;
+		this.UUID = UUIDGen.generate(sprintf("scene-%s",config.address));
+		this.log = log;
+		
+		this.value = 0;
+		this.log.info(sprintf("LegrandMyHome::MHScene create object: %s", this.address));
+	}
+
+	getServices() {
+		var services = [];
+		var service = new Service.AccessoryInformation();
+		service.setCharacteristic(Characteristic.Name, this.name)
+			.setCharacteristic(Characteristic.Manufacturer, "Legrand MyHome")
+			.setCharacteristic(Characteristic.Model, "Scene")
+			.setCharacteristic(Characteristic.SerialNumber, "Address " + this.address + " scene " + this.scene);
+
+			
+		this.statelessSwitch = new Service.Switch(this.name);
+		this.statelessSwitch.getCharacteristic(Characteristic.On)
+			.on('set', (value,callback) => {
+				if (value == true) {
+					this.log.info(sprintf("sceneOn %s = scenario %s",this.address, this.scene));
+					this.mh.sceneCommand(this.address,this.scene)
+
+					/* Back to Off */
+					var Timer = setTimeout(function() {
+						this.statelessSwitch.getCharacteristic(Characteristic.On).setValue(false, undefined)
+					}.bind(this), 500);
+				}
+				callback(null);
+			})
+			.on('get', (callback) => {
+				this.log.info(sprintf("getStatus %s",this.address));
+				callback(null,false);
+			});
+		return [service, this.statelessSwitch];				
+
+	}	
 }
 
 class MHDimmer {
@@ -678,5 +737,40 @@ class MHPowerMeter {
 				callback(null, this.value);
 			});
 		return [service, this.powerMeterService];
+	}	
+}
+
+class MHButton {
+	constructor(log, config) {
+		this.config = config || {};
+		this.mh = config.parent.controller;
+		this.name = config.name;
+		this.address = config.address;
+		this.displayName = config.name;
+		this.UUID = UUIDGen.generate(sprintf("button-%s",config.address));
+		this.log = log;
+		
+		this.value = 0;
+		this.log.info(sprintf("LegrandMyHome::MHButton (CEN/CEN+) create object: %s", this.address));
+	}
+
+	getServices() {
+		var service = new Service.AccessoryInformation();
+		service.setCharacteristic(Characteristic.Name, this.name)
+			.setCharacteristic(Characteristic.Manufacturer, "Legrand MyHome")
+			.setCharacteristic(Characteristic.Model, "CEN/CEN+")
+			.setCharacteristic(Characteristic.SerialNumber, "Address " + this.address);
+
+		this.statelessSwitch = new Service.Switch(this.name);
+		this.statelessSwitch.getCharacteristic(Characteristic.On)
+			.on('set', (value,callback) => {
+				this.log.info(sprintf("setOn %s = %s",this.address, value));
+				callback(null);
+			})
+			.on('get', (callback) => {
+				this.log.info(sprintf("getOn %s",this.address));
+				callback(null,0);
+			});
+		return [service, this.statelessSwitch];
 	}	
 }
