@@ -1,4 +1,5 @@
-var path = require("path");	
+var path = require("path");
+var http = require("http");	
 var mh = require(path.join(__dirname,'/lib/mhclient'));
 var sprintf = require("sprintf-js").sprintf, inherits = require("util").inherits, Promise = require('promise');
 var events = require('events'), util = require('util'), fs = require('fs');
@@ -85,6 +86,18 @@ class LegrandMyHome {
 				accessory.power = _onoff;
 				accessory.bri = _onoff * 100;
 				accessory.lightBulbService.getCharacteristic(Characteristic.On).getValue(null);
+
+				// IFTTT Integration
+				var eventName = "light-" + accessory.address.replace("/", "-") + "-" + _onoff ? "on" : "off";
+				var url = "https://maker.ifttt.com/trigger/" + eventName + "/with/key/bbfVV-R7YVxT3hPDwAG89R";
+				http.get(url, (res) => {
+					const { statusCode } = res;
+					const contentType = res.headers['content-type'];
+					
+					if (statusCode !== 200) {
+						this.log.debug("Error triggering IFTTT: " + statusCode);
+					}
+				})
 			}
 		}.bind(this));
 	}
