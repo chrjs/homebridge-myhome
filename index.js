@@ -91,7 +91,7 @@ class LegrandMyHome {
 
 				// IFTTT Integration
 				if (this.config.hasOwnProperty("iftttkey")) {
-					this.log("IFTTT integration configured with key = " + this.config.iftttkey;
+					this.log("IFTTT integration configured with key = " + this.config.iftttkey);
 					var eventName = "light-" + accessory.address.replace(/\//g, "-") + "-" + (_onoff ? "on" : "off");
 					var url = "https://maker.ifttt.com/trigger/" + eventName + "/with/key/" + this.config.iftttkey;
 					this.log("Sending IFTTT trigger for: " + eventName);
