@@ -1,5 +1,6 @@
 var path = require("path");
 var https = require("https");	
+var hue = require("node-hue-api");
 var mh = require(path.join(__dirname,'/lib/mhclient'));
 var sprintf = require("sprintf-js").sprintf, inherits = require("util").inherits, Promise = require('promise');
 var events = require('events'), util = require('util'), fs = require('fs');
@@ -103,6 +104,23 @@ class LegrandMyHome {
 							this.log.debug("Error triggering IFTTT: " + url  + " - " + statusCode);
 						}
 					});
+				}
+
+				// Philips Hue integration
+				if (this.config.hasOwnProperty("huebridge")) {
+					if (accessory.config.hasOwnProperty("hueaddress")) {
+						var HueApi = hue.HueApi;
+						var lightState = hue.lightState;
+						var host = this.config.huebridge;
+						var username = this.config.hueusername,
+						api = new HueApi(host, username),
+						state = lightState.create();
+						api.setLightState(accessory.config.hueaddress, _onoff ? state.on() : state.off(), function(err, lights) {
+							if (err) {
+								this.log("Error: " + err);
+							}
+						});
+					}
 				}
 			}
 		}.bind(this));
