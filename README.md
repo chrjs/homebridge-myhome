@@ -12,6 +12,59 @@ systems (MyHome does not support the autodiscovery of the system) you can contro
 authentication from the IP of the device that runs homebridge (ie. Raspberry) or set the auhentication to HMAC; 
 HMAC authentication is supported by all recent IP gateways or older one with updated firmware (eg. F454 with v2 firmware).
 
+# Additional features in this fork
+
+This fork adds some rough integrations for *IFTTT* and *Philips Hue*.
+
+## IFTTT
+
+An IFFTT integration for HMRalay accessories can be enable so that each HMRelays status change is triggered to IFTTT.
+The integration can be enalbed by setting the IFTTT Webhooks Service on your IFTTT account and obtaining the authorization key, that need to be configured as *iftttkey* in the config.json file like the following:    
+    
+    {
+      "platforms": [{
+          "platform": "LegrandMyHome",
+          "ipaddress": "192.168.1.35",
+          "port": 20000,
+          "ownpassword": "12345",
+          "discovery": false,
+          "iftttkey" : "bvYzzbiu6Xu6UqTu-l7Kxb",
+          
+After the configuration, each HMRelay status change is notified to your IFTTT Webhooks service with an event name with the format:
+
+*light-B-A-PL-on|off*
+
+where B = Bus, A = Ambient, PL = Light Point.
+For example:
+
+*light-0-1-1-on*
+
+## Philips Hue
+
+The integration with Philips Hue devices is also limited to HMRelay accessories.
+It requires to obtain the bridge IP address and an authorized username, that can be configured in the config.json file as *huebridge* and *hueusername* like the following:
+
+    {
+      "platforms": [{
+          "platform": "LegrandMyHome",
+          "ipaddress": "192.168.1.35",
+          "port": 20000,
+          "ownpassword": "112248",
+          "discovery": false,
+          "huebridge" : "192.168.1.105",
+          "hueusername" : "x7qY4Yj3p2hpDgrNIACkr-hPlV9kwkx4PmqkP4X1",
+          
+Then, on a specific HMRelay accessory, a specific light ID (*hueaddress*) can be associated, so that each time the MHRelay changes its status, the same is triggered on the related Philips Hue light.
+
+    "devices": [
+        {
+          "accessory": "MHRelay",
+          "name": "Abatjour Soggiorno",
+          "address": "0/1/1",
+          "hueaddress": "1"
+        },
+
+
 # Installation (TBD)
 Install plugin with npm install -g homebridge-myhome
 Add platform within config.json of you homebridge instance:
