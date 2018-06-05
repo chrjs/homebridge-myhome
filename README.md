@@ -18,7 +18,7 @@ This fork adds some rough integrations for *IFTTT* and *Philips Hue*.
 
 ## IFTTT
 
-An IFFTT integration for HMRalay accessories can be enable so that each HMRelays status change is triggered to IFTTT.
+An IFFTT integration for HMRelay accessories can be enable so that each HMRelays status change is triggered to IFTTT.
 The integration can be enalbed by setting the IFTTT Webhooks Service on your IFTTT account and obtaining the authorization key, that need to be configured as *iftttkey* in the config.json file like the following:    
     
     {
@@ -42,19 +42,21 @@ For example:
 ## Philips Hue
 
 The integration with Philips Hue devices is also limited to HMRelay accessories.
-It requires to obtain the bridge IP address and an authorized username, that can be configured in the config.json file as *huebridge* and *hueusername* like the following:
+You need to obtain the bridge IP address and an authorized username, that can be configured in the config.json file as *huebridge* and *hueusername* like the following:
 
     {
       "platforms": [{
           "platform": "LegrandMyHome",
           "ipaddress": "192.168.1.35",
           "port": 20000,
-          "ownpassword": "112248",
+          "ownpassword": "12345",
           "discovery": false,
           "huebridge" : "192.168.1.105",
           "hueusername" : "x7qY4Yj3p2hpDgrNIACkr-hPlV9kwkx4PmqkP4X1",
-          
-Then, on a specific HMRelay accessory, a specific light ID (*hueaddress*) can be associated, so that each time the MHRelay changes its status, the same is triggered on the related Philips Hue light.
+ 
+To get the IP and username, please refer to Philips Hue API documentation (https://www.developers.meethue.com/documentation/getting-started).
+
+Once the bridge is configured, a specific light ID (*hueaddress*) can be associated to a HMRelay accessory, so that each time the MHRelay changes its status, the same is triggered on the related Philips Hue light.
 
     "devices": [
         {
