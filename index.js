@@ -86,7 +86,7 @@ class LegrandMyHome {
 	onRelay(_address,_onoff) {
 		this.devices.forEach(function(accessory) {
 			if (accessory.address == _address && accessory.lightBulbService !== undefined) {
-				var changed = accessory.power = _onoff;
+				var changed = accessory.power != _onoff;
 				accessory.power = _onoff;
 				accessory.bri = _onoff * 100;
 				accessory.lightBulbService.getCharacteristic(Characteristic.On).getValue(null);
