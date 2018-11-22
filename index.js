@@ -1,7 +1,7 @@
-var path = require("path");
+var path = require("path");	
+var mh = require(path.join(__dirname,'/lib/mhclient'));
 var https = require("https");	
 var hue = require("node-hue-api");
-var mh = require(path.join(__dirname,'/lib/mhclient'));
 var sprintf = require("sprintf-js").sprintf, inherits = require("util").inherits, Promise = require('promise');
 var events = require('events'), util = require('util'), fs = require('fs');
 var Accessory, Characteristic, Service, UUIDGen;
@@ -86,12 +86,13 @@ class LegrandMyHome {
 	onRelay(_address,_onoff) {
 		this.devices.forEach(function(accessory) {
 			if (accessory.address == _address && accessory.lightBulbService !== undefined) {
+				var changed = accessory.power = _onoff;
 				accessory.power = _onoff;
 				accessory.bri = _onoff * 100;
 				accessory.lightBulbService.getCharacteristic(Characteristic.On).getValue(null);
-
+ 
 				// IFTTT Integration
-				if (this.config.hasOwnProperty("iftttkey")) {
+				if (this.config.hasOwnProperty("iftttkey") && changed) {
 					this.log("IFTTT integration configured with key = " + this.config.iftttkey);
 					var eventName = "light-" + accessory.address.replace(/\//g, "-") + "-" + (_onoff ? "on" : "off");
 					var url = "https://maker.ifttt.com/trigger/" + eventName + "/with/key/" + this.config.iftttkey;
@@ -107,7 +108,7 @@ class LegrandMyHome {
 				}
 
 				// Philips Hue integration
-				if (this.config.hasOwnProperty("huebridge")) {
+				if (this.config.hasOwnProperty("huebridge") && changed) {
 					if (accessory.config.hasOwnProperty("hueaddress")) {
 						var HueApi = hue.HueApi;
 						var lightState = hue.lightState;
@@ -205,7 +206,7 @@ class LegrandMyHome {
 				if (_measure == "SETPOINT") {
 					accessory.setpoint = _level;
 					accessory.thermostatService.getCharacteristic(Characteristic.TargetTemperature).getValue(null);
-					// accessory.thermostatService.getCharacteristic(Characteristic.TargetHeatingCoolingState).getValue(null);
+					accessory.thermostatService.getCharacteristic(Characteristic.TargetHeatingCoolingState).getValue(null);
 				}
 				if (_measure == "HEATING") {
 					if (_level == true) {
@@ -214,8 +215,8 @@ class LegrandMyHome {
 						if (accessory.state != Characteristic.CurrentHeatingCoolingState.COOL)
 							accessory.state = Characteristic.CurrentHeatingCoolingState.OFF;
 					}
-					accessory.thermostatService.getCharacteristic(Characteristic.TargetHeatingCoolingState).getValue(null);
 					accessory.thermostatService.getCharacteristic(Characteristic.CurrentHeatingCoolingState).getValue(null);
+					accessory.thermostatService.getCharacteristic(Characteristic.TargetHeatingCoolingState).getValue(null);
 				}
 				if (_measure == "COOLING") {
 					if (_level == true) {
@@ -224,8 +225,8 @@ class LegrandMyHome {
 						if (accessory.state != Characteristic.CurrentHeatingCoolingState.HEAT)
 							accessory.state = Characteristic.CurrentHeatingCoolingState.OFF;
 					}
-					accessory.thermostatService.getCharacteristic(Characteristic.TargetHeatingCoolingState).getValue(null);
 					accessory.thermostatService.getCharacteristic(Characteristic.CurrentHeatingCoolingState).getValue(null);
+					accessory.thermostatService.getCharacteristic(Characteristic.TargetHeatingCoolingState).getValue(null);
 				}
 			}
 		}.bind(this));		
@@ -616,7 +617,7 @@ class MHThermostat {
 
 		this.thermostatService.getCharacteristic(Characteristic.CurrentHeatingCoolingState)
 			.on('get', (callback) => {
-				this.log.info(sprintf("getCurrentHeatingCoolingState %s = %s",this.address, this.state));
+				this.log.debug(sprintf("getCurrentHeatingCoolingState %s = %s",this.address, this.state));
 				callback(null, this.state);
 			}).on('set', (value,callback) => {
 				callback(null);
@@ -624,21 +625,14 @@ class MHThermostat {
 
 		this.thermostatService.getCharacteristic(Characteristic.TargetHeatingCoolingState)
 			.on('get', (callback) => {
-				this.log.info(sprintf("getTargetHeatingCoolingState %s = %s",this.address, this.state));
-				callback(null, this.state);
-				
-				/*
-				USELESS: target will turn on the "led" status of the UI so we 
-				prefer to notify the real state of the actuator (if installed)
-
-				if (parseFloat(this.setpoint) > parseFloat(this.ambient)) {
+				this.log.debug(sprintf("getTargetHeatingCoolingState %s = %s",this.address, this.state));
+				if (parseInt(this.setpoint,10) > parseInt(this.ambient,10)) {
 					callback(null, Characteristic.TargetHeatingCoolingState.HEAT);
-				} else if (parseFloat(this.setpoint) < parseFloat(this.ambient)) {
+				} else if (parseInt(this.setpoint,10) < parseInt(this.ambient,10)) {
 					callback(null, Characteristic.TargetHeatingCoolingState.COOL);
 				} else {
 					callback(null, Characteristic.TargetHeatingCoolingState.OFF);
 				}
-				*/
 			}).on('set', (value,callback) => {
 				this.state = value;
 				this.log.debug(sprintf("setTargetHeatingCoolingState %s = %s",this.address, this.state));
