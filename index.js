@@ -1,5 +1,6 @@
-var path = require("path");	
+var path = require("path");
 var mh = require(path.join(__dirname,'/lib/mhclient'));
+var http = require("http");	
 var https = require("https");	
 var hue = require("node-hue-api");
 var sprintf = require("sprintf-js").sprintf, inherits = require("util").inherits, Promise = require('promise');
@@ -86,11 +87,11 @@ class LegrandMyHome {
 	onRelay(_address,_onoff) {
 		this.devices.forEach(function(accessory) {
 			if (accessory.address == _address && accessory.lightBulbService !== undefined) {
-				var changed = accessory.power != _onoff;
+				var changed = accessory.power = _onoff;
 				accessory.power = _onoff;
 				accessory.bri = _onoff * 100;
 				accessory.lightBulbService.getCharacteristic(Characteristic.On).getValue(null);
- 
+				
 				// IFTTT Integration
 				if (this.config.hasOwnProperty("iftttkey") && changed) {
 					this.log("IFTTT integration configured with key = " + this.config.iftttkey);
@@ -111,14 +112,16 @@ class LegrandMyHome {
 				if (this.config.hasOwnProperty("huebridge") && changed) {
 					if (accessory.config.hasOwnProperty("hueaddress")) {
 						var HueApi = hue.HueApi;
-						var lightState = hue.lightState;
 						var host = this.config.huebridge;
-						var username = this.config.hueusername,
-						api = new HueApi(host, username),
-						state = lightState.create();
+						var username = this.config.hueusername;
+						this.log("Sending HueBridge trigger for: " + eventName + " to host " + host);
+						var api = new HueApi(host, username);
+						
+						var state = hue.lightState.create();
+						var that = this;
 						api.setLightState(accessory.config.hueaddress, _onoff ? state.on() : state.off(), function(err, lights) {
 							if (err) {
-								this.log("Error: " + err);
+								that.log.error("Error: " + err);
 							}
 						});
 					}
